@@ -218,3 +218,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# TypeScript
+node_modules
+
+# Docker
+docker-compose.yml
