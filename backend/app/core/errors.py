@@ -14,3 +14,4 @@ class ErrorResponse(BaseModel):
     error_code: ErrorCode = Field(description="Machine-readable code for the frontend")
     error_message: str = Field(description="Short human-readable summary")
     error_details: list[ErrorDetail] | None = Field(default=None, description="Per-field errors, if any")
+    request_id: str | None = Field(default=None, description="Request ID for log lookup")

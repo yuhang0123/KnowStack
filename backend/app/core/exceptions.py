@@ -3,8 +3,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from .errors import ErrorResponse, ErrorDetail, ErrorCode
 
-import logging
-logger = logging.getLogger(__name__)
+import structlog
+from structlog.contextvars import get_contextvars
+logger = structlog.getLogger()
 
 # --- CUSTOM EXCEPTION --- 
 
@@ -21,6 +22,7 @@ class AppError(Exception):
 # --- HANDLERS --- 
 
 def _error_response(status_code: int, body: ErrorResponse) -> JSONResponse:
+    body.request_id = get_contextvars().get("request_id")
     return JSONResponse(status_code=status_code, content=body.model_dump(mode="json"))
 
 async def app_error_handler(request: Request, exc: AppError) -> JSONResponse:
@@ -46,12 +48,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         field = get_error_field(loc)
         details.append(ErrorDetail(field=field, message=err["msg"]))
 
-    response = ErrorResponse(
-        error_code=ErrorCode.VALIDATION_ERROR,
-        error_message="Invalid Request.",
-        error_details=details
-    )
-
+    logger.error(f"Request validation error on {request.method} {request.url.path}")
     return _error_response(
         422,
         ErrorResponse(
@@ -64,7 +61,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # for internal diagnose only
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     # Log the real error server-side, but never expose it to the client
-    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    logger.error("Unhandled error on %s %s", request.method, request.url.path)
     return _error_response(
         500,
         ErrorResponse(
