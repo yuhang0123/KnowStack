@@ -1,15 +1,13 @@
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from dotenv import load_dotenv 
 import os
 from functools import lru_cache
-from typing import Annotated
 from starlette.middleware.cors import CORSMiddleware
-from fastapi.exceptions import RequestValidationError
-import structlog
 
 from .core.config import LoggingSettings, OpenAISettings
 from .core.exceptions import register_exception_handlers
 from .core.logging import setup_logging, LoggingMiddleware
+from .api.router import api_router
 
 @lru_cache
 def get_all_settings():
@@ -49,20 +47,10 @@ app.add_middleware(
 )
 app.add_middleware(LoggingMiddleware)
 
+app.include_router(
+    api_router,
+    prefix="/api/v1"
+)
+
 # Exception Handler
 register_exception_handlers(app)
-
-@app.get("/api/v1/health")
-async def get_health():
-    return {"health": 100}
-
-# @app.get("/api/v1/info")
-# async def get_info(settings: Annotated[Settings, Depends(get_settings)]):
-#     return {
-#         "api_key": settings.openai_api_key,
-#         "model": settings.openai_model
-#     }
-
-@app.put("/api/v1/health/{health}")
-def get_health_id(health: int):
-    return {"health": health}
